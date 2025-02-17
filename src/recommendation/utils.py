@@ -61,29 +61,54 @@ def create_recommendation_templates():
     """
     return {
         0: {
-            'text': "Regular dental check-ups are recommended every 6 months.",
+            'text': "Schedule regular dental check-ups every 6 months for early detection and prevention. Professional cleaning and examination are essential for maintaining oral health.",
             'severity': 'low',
-            'urgency': 'routine'
+            'urgency': 'routine',
+            'actions': [
+                'Schedule bi-annual check-ups',
+                'Get professional cleaning',
+                'Monitor any changes'
+            ]
         },
         1: {
-            'text': "Consider using fluoride toothpaste to strengthen enamel.",
+            'text': "Use high-fluoride toothpaste and consider professional fluoride treatment. This helps strengthen tooth enamel and prevent cavity progression.",
             'severity': 'low',
-            'urgency': 'preventive'
+            'urgency': 'preventive',
+            'actions': [
+                'Switch to fluoride toothpaste',
+                'Consider fluoride treatment',
+                'Use fluoride mouthwash'
+            ]
         },
         2: {
-            'text': "Immediate dental visit is required for deep cavity treatment.",
+            'text': "Immediate dental visit required for treatment of deep cavity. Delay may lead to more serious complications like infection or abscess.",
             'severity': 'high',
-            'urgency': 'immediate'
+            'urgency': 'immediate',
+            'actions': [
+                'Schedule emergency appointment',
+                'Manage pain appropriately',
+                'Avoid pressure on affected area'
+            ]
         },
         3: {
-            'text': "Modify diet to reduce sugar intake and prevent cavity progression.",
+            'text': "Modify diet to reduce sugar and acid intake. Limit snacking frequency and choose tooth-friendly foods to prevent cavity progression.",
             'severity': 'medium',
-            'urgency': 'important'
+            'urgency': 'important',
+            'actions': [
+                'Reduce sugar consumption',
+                'Avoid acidic drinks',
+                'Choose healthy snacks'
+            ]
         },
         4: {
-            'text': "Improve brushing technique, focusing on hard-to-reach areas.",
+            'text': "Improve brushing technique focusing on problem areas. Use proper brushing method, ensure thorough cleaning, and consider using interdental cleaning tools.",
             'severity': 'low',
-            'urgency': 'educational'
+            'urgency': 'educational',
+            'actions': [
+                'Use proper brushing technique',
+                'Implement interdental cleaning',
+                'Brush for full 2 minutes'
+            ]
         }
     }
 
@@ -97,45 +122,118 @@ def generate_training_data(num_samples=1000):
     Returns:
         list: List of training examples
     """
-    conditions = ['caries', 'cavity', 'decay']
-    severities = ['superficial', 'medium', 'deep']
-    symptoms = [
-        'pain when eating',
-        'sensitivity to hot/cold',
-        'visible holes',
-        'dark spots',
-        'persistent toothache'
-    ]
+    conditions = {
+        'caries': {
+            'symptoms': [
+                'pain when eating sweets',
+                'sensitivity to hot/cold',
+                'visible dark spots',
+                'toothache',
+                'visible holes in teeth'
+            ],
+            'risk_factors': [
+                'poor oral hygiene',
+                'high sugar diet',
+                'irregular dental visits',
+                'dry mouth',
+                'acidic foods/drinks'
+            ]
+        },
+        'cavity': {
+            'symptoms': [
+                'tooth sensitivity',
+                'mild to sharp pain',
+                'visible pits',
+                'pain when biting',
+                'staining on teeth'
+            ],
+            'risk_factors': [
+                'inadequate brushing',
+                'frequent snacking',
+                'lack of fluoride',
+                'deep tooth grooves',
+                'genetic predisposition'
+            ]
+        },
+        'decay': {
+            'symptoms': [
+                'continuous pain',
+                'bad breath',
+                'bitter taste',
+                'swollen gums',
+                'difficulty chewing'
+            ],
+            'risk_factors': [
+                'smoking',
+                'medical conditions',
+                'medications affecting saliva',
+                'poor diet',
+                'family history'
+            ]
+        }
+    }
+    
+    severity_recommendations = {
+        'superficial': [
+            0,  # Regular check-ups
+            1,  # Fluoride treatment
+            4   # Improve brushing
+        ],
+        'medium': [
+            1,  # Fluoride treatment
+            3,  # Diet modification
+            4   # Improve brushing
+        ],
+        'deep': [
+            2,  # Immediate treatment
+            3,  # Diet modification
+            1   # Fluoride treatment
+        ]
+    }
+    
     histories = [
-        'regular dental visits',
-        'poor oral hygiene',
-        'high sugar diet',
-        'smoking',
-        'previous cavities'
+        'regular dental visits every 6 months',
+        'last dental visit over a year ago',
+        'history of multiple cavities',
+        'recent dental work',
+        'first cavity detection',
+        'ongoing dental treatment',
+        'family history of dental problems',
+        'good oral hygiene routine',
+        'inconsistent oral care',
+        'recent changes in oral health'
     ]
     
     import random
     
     data = []
     for _ in range(num_samples):
-        severity = random.choice(severities)
-        condition = random.choice(conditions)
+        # Select condition and severity
+        condition = random.choice(list(conditions.keys()))
+        severity = random.choice(['superficial', 'medium', 'deep'])
         
-        # Select recommendation based on severity
-        if severity == 'deep':
-            rec_idx = 2  # immediate treatment
-        elif severity == 'medium':
-            rec_idx = random.choice([1, 3, 4])  # preventive measures
-        else:
-            rec_idx = random.choice([0, 1, 4])  # routine care
+        # Get condition-specific data
+        condition_data = conditions[condition]
+        symptoms = random.sample(condition_data['symptoms'], 
+                               random.randint(1, 3))
+        risk_factors = random.sample(condition_data['risk_factors'], 
+                                   random.randint(1, 2))
+        
+        # Select appropriate recommendation based on severity
+        rec_idx = random.choice(severity_recommendations[severity])
             
-        # Create sample
+        # Create sample with detailed context
         sample = {
             'condition': condition,
             'severity': severity,
-            'symptoms': random.sample(symptoms, random.randint(1, 3)),
+            'symptoms': symptoms,
+            'risk_factors': risk_factors,
             'history': random.choice(histories),
-            'recommendation_idx': rec_idx
+            'recommendation_idx': rec_idx,
+            'context': f"Patient presents with {severity} {condition}, " + \
+                      f"showing symptoms of {', '.join(symptoms)}. " + \
+                      f"Risk factors include {', '.join(risk_factors)}. " + \
+                      f"Medical history: {random.choice(histories)}."
         }
         
         data.append(sample)

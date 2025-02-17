@@ -1,1 +1,1 @@
-"""Classification module for dental caries classification.""" 
+"""Classification module for dental caries severity assessment.""" 

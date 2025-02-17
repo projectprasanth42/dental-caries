@@ -5,12 +5,12 @@ import torchvision.models as models
 class DentalCariesClassifier(nn.Module):
     """Dental caries classification model based on ResNet-50."""
     
-    def __init__(self, num_classes=3):
+    def __init__(self, num_classes=4):
         """
         Initialize the model.
         
         Args:
-            num_classes (int): Number of classes
+            num_classes (int): Number of classes (normal, superficial, medium, deep)
         """
         super().__init__()
         
@@ -50,6 +50,14 @@ class DentalCariesClassifier(nn.Module):
         """
         self.eval()
         with torch.no_grad():
-            probabilities = self.forward(x)
+            logits = self.forward(x)
+            probabilities = torch.softmax(logits, dim=1)
             predictions = torch.argmax(probabilities, dim=1)
+            
+            # Debug information
+            print("\nClassification Debug Info:")
+            print(f"Logits: {logits}")
+            print(f"Probabilities: {probabilities}")
+            print(f"Predictions: {predictions}")
+            
         return predictions, probabilities 

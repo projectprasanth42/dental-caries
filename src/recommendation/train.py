@@ -24,23 +24,16 @@ def train_model(data_dir, num_epochs=1, batch_size=4, learning_rate=0.001):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f"Using device: {device}")
         
-        # Generate training data if not exists
-        train_data_path = os.path.join(data_dir, 'recommendation_train_data.json')
-        try:
-            if not os.path.exists(train_data_path):
-                print("Generating training data...")
-                train_data = generate_training_data(data_dir)
-                os.makedirs(os.path.dirname(train_data_path), exist_ok=True)
-                with open(train_data_path, 'w') as f:
-                    json.dump(train_data, f)
-                print(f"Training data saved to {train_data_path}")
-            else:
-                print("Loading existing training data...")
-                with open(train_data_path, 'r') as f:
-                    train_data = json.load(f)
-        except Exception as e:
-            print(f"Error handling training data: {str(e)}")
-            raise
+        # Generate training data
+        print("Generating training data...")
+        train_data = generate_training_data(num_samples=10)  # Use small number for testing
+        
+        # Save training data temporarily
+        train_data_path = os.path.join('models/recommendation', 'temp_train_data.json')
+        os.makedirs(os.path.dirname(train_data_path), exist_ok=True)
+        with open(train_data_path, 'w') as f:
+            json.dump(train_data, f)
+        print(f"Training data saved to {train_data_path}")
         
         # Initialize model
         try:
@@ -53,7 +46,7 @@ def train_model(data_dir, num_epochs=1, batch_size=4, learning_rate=0.001):
         
         # Create dataset
         try:
-            train_dataset = RecommendationDataset(train_data)
+            train_dataset = RecommendationDataset(train_data_path)
             if len(train_dataset) == 0:
                 raise ValueError("No training samples found!")
             print(f"Dataset created successfully with {len(train_dataset)} samples")
@@ -76,7 +69,7 @@ def train_model(data_dir, num_epochs=1, batch_size=4, learning_rate=0.001):
             raise
         
         # Initialize loss and optimizer
-        criterion = nn.BCEWithLogitsLoss()
+        criterion = nn.CrossEntropyLoss()  # Changed from BCEWithLogitsLoss
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
         
         # Training loop
@@ -107,9 +100,9 @@ def train_model(data_dir, num_epochs=1, batch_size=4, learning_rate=0.001):
                     optimizer.step()
                     
                     # Calculate accuracy
-                    predictions = (outputs > 0.5).float()
-                    correct_predictions += (predictions == targets).sum().item()
-                    total_predictions += targets.numel()
+                    _, predicted = torch.max(outputs.data, 1)
+                    total_predictions += targets.size(0)
+                    correct_predictions += (predicted == targets).sum().item()
                     accuracy = 100 * correct_predictions / total_predictions
                     
                     # Update metrics
@@ -121,13 +114,6 @@ def train_model(data_dir, num_epochs=1, batch_size=4, learning_rate=0.001):
                         'loss': f"{batch_loss:.4f}",
                         'accuracy': f"{accuracy:.2f}%"
                     })
-                    
-                    # Print batch statistics
-                    if (batch_idx + 1) % 10 == 0:
-                        print(f"\nBatch {batch_idx + 1}/{len(train_loader)}:")
-                        print(f"Loss: {loss.item():.4f}")
-                        print(f"Accuracy: {accuracy:.2f}%")
-                        print("Prediction distribution:", torch.bincount(predictions.long().flatten()))
                     
                 except Exception as e:
                     print(f"Error in batch {batch_idx}: {str(e)}")

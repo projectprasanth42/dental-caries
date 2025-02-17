@@ -78,7 +78,7 @@ class DentalDataset(Dataset):
             if self.transform is not None:
                 # Handle empty boxes
                 if len(boxes) == 0:
-                    boxes = torch.tensor([[0, 0, 1, 1]], dtype=torch.float32)
+                    boxes = torch.tensor([[0.0, 0.0, 0.1, 0.1]], dtype=torch.float32)
                     labels = torch.tensor([0], dtype=torch.int64)
                 
                 # Convert boxes to numpy for albumentations
@@ -104,8 +104,8 @@ class DentalDataset(Dataset):
                     target['labels'] = torch.as_tensor(transformed['labels'], 
                                                      dtype=torch.int64)
                 else:
-                    # If no valid boxes after transform, create dummy box
-                    target['boxes'] = torch.tensor([[0, 0, 1, 1]], dtype=torch.float32)
+                    # If no valid boxes after transform, create normalized dummy box
+                    target['boxes'] = torch.tensor([[0.0, 0.0, 0.1, 0.1]], dtype=torch.float32)
                     target['labels'] = torch.tensor([0], dtype=torch.int64)
             else:
                 # If no transform, manually convert image to tensor and normalize
@@ -116,7 +116,7 @@ class DentalDataset(Dataset):
             
         except Exception as e:
             print(f"Error loading sample {idx}: {str(e)}")
-            # Return a dummy sample
+            # Return a dummy sample with normalized box
             return self._get_dummy_sample()
     
     def _get_boxes_from_mask(self, mask):
@@ -147,12 +147,17 @@ class DentalDataset(Dataset):
                 
                 # Add box if it's large enough (at least 5x5 pixels)
                 if (x_max - x_min) >= 5 and (y_max - y_min) >= 5:
-                    boxes.append([x_min, y_min, x_max, y_max])
+                    # Normalize box coordinates to [0, 1] range
+                    x_min_norm = x_min / mask.shape[1]
+                    y_min_norm = y_min / mask.shape[0]
+                    x_max_norm = x_max / mask.shape[1]
+                    y_max_norm = y_max / mask.shape[0]
+                    boxes.append([x_min_norm, y_min_norm, x_max_norm, y_max_norm])
                     box_labels.append(1)  # 1 for caries
             
             if len(boxes) == 0:
-                # Return dummy box if no valid boxes found
-                return torch.tensor([[0, 0, 1, 1]], dtype=torch.float32), \
+                # Return normalized dummy box if no valid boxes found
+                return torch.tensor([[0.0, 0.0, 0.1, 0.1]], dtype=torch.float32), \
                        torch.tensor([0], dtype=torch.int64)
                 
             return torch.as_tensor(boxes, dtype=torch.float32), \
@@ -160,14 +165,14 @@ class DentalDataset(Dataset):
                    
         except Exception as e:
             print(f"Error extracting boxes from mask: {str(e)}")
-            return torch.tensor([[0, 0, 1, 1]], dtype=torch.float32), \
+            return torch.tensor([[0.0, 0.0, 0.1, 0.1]], dtype=torch.float32), \
                    torch.tensor([0], dtype=torch.int64)
     
     def _get_dummy_sample(self):
         """Create a dummy sample for error cases."""
         image = torch.zeros((3, 512, 512), dtype=torch.float32)  # Float tensor in [0, 1]
         target = {
-            'boxes': torch.tensor([[0, 0, 1, 1]], dtype=torch.float32),
+            'boxes': torch.tensor([[0.0, 0.0, 0.1, 0.1]], dtype=torch.float32),
             'labels': torch.tensor([0], dtype=torch.int64),
             'masks': torch.zeros((1, 512, 512), dtype=torch.uint8)  # Add channel dimension
         }

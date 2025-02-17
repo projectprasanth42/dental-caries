@@ -98,7 +98,7 @@ def get_class_weights(data_dir):
     total_samples = 0
     
     # Define expected classes
-    expected_classes = ['superficial', 'medium', 'deep']
+    expected_classes = ['normal', 'superficial', 'medium', 'deep']
     
     # Count samples in each class
     for class_name in expected_classes:

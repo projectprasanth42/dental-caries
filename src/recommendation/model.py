@@ -51,29 +51,15 @@ class DentalRecommendationSystem(nn.Module):
         Forward pass of the model.
         
         Args:
-            x (str or dict): Input text or dictionary containing tokenized input
+            x (dict): Dictionary containing tokenized input
             
         Returns:
             Tensor: Recommendation logits
         """
-        # Handle string input
-        if isinstance(x, str):
-            # Tokenize input
-            inputs = self.tokenizer(
-                x,
-                max_length=512,
-                padding='max_length',
-                truncation=True,
-                return_tensors='pt'
-            )
-            inputs = {k: v.to(next(self.parameters()).device) for k, v in inputs.items()}
-        else:
-            inputs = x
-        
         # Get BERT features
         outputs = self.bert(
-            input_ids=inputs['input_ids'],
-            attention_mask=inputs['attention_mask']
+            input_ids=x['input_ids'],
+            attention_mask=x['attention_mask']
         )
         
         # Use [CLS] token output as features
@@ -97,11 +83,31 @@ class DentalRecommendationSystem(nn.Module):
         # Create input text from condition and severity
         input_text = f"Patient has {severity} {condition} with {confidence:.2f} confidence."
         
+        # Tokenize input
+        inputs = self.tokenizer(
+            input_text,
+            max_length=512,
+            padding='max_length',
+            truncation=True,
+            return_tensors='pt'
+        )
+        inputs = {k: v.to(next(self.parameters()).device) for k, v in inputs.items()}
+        
         # Get recommendation scores
         self.eval()
         with torch.no_grad():
-            scores = self.forward(input_text)
-            ranked_indices = torch.argsort(scores, dim=1, descending=True)[0]
+            scores = self.forward(inputs)
+            probabilities = torch.softmax(scores, dim=1)
+            ranked_indices = torch.argsort(probabilities, dim=1, descending=True)[0]
         
-        # Return ranked recommendations
-        return [self.recommendations[idx.item()] for idx in ranked_indices] 
+        # Return ranked recommendations with confidence scores
+        recommendations = []
+        for idx in ranked_indices:
+            idx = idx.item()
+            confidence = probabilities[0, idx].item()
+            recommendations.append({
+                'text': self.recommendations[idx],
+                'confidence': confidence
+            })
+        
+        return recommendations 
